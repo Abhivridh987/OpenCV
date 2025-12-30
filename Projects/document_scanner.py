@@ -1,15 +1,11 @@
 import cv2 as cv
 import numpy as np
+import os
+# from imutils.perspective import four_point_transform
 
-def resize_image(frame, scale=0.5):
-    w = frame.shape[1]
-    h = frame.shape[0]
-    d = (int(w * scale), int(h * scale))
-    return cv.resize(frame, d, interpolation=cv.INTER_AREA)
 
 def order_points(pts):
-    pts = pts.reshape((4,2))
-    rect = np.zeros((4,2), dtype='float32')
+    rect = np.zeros((4,2), dtype="float32")
 
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]
@@ -21,106 +17,99 @@ def order_points(pts):
 
     return rect
 
+def four_point_transform(image, pts):
+    rect = order_points(pts)
+    (tl,tr,br,bl) = rect
 
-doc = resize_image(cv.imread('../Images/notes.webp'))
-cv.imshow('Original Document', doc)
+    widthA = np.linalg.norm(br-bl)
+    widthB = np.linalg.norm(tr - tl)
+    maxWidth = int(max(widthA, widthB))
 
-blank = np.zeros(doc.shape, dtype='uint8')
-blank[:] = 255,255,255
+    heightA = np.linalg.norm(tr - br)
+    heightB = np.linalg.norm(tl- bl)
+    maxHeight = int(max(heightA, heightB))
 
-gray = cv.cvtColor(doc, cv.COLOR_BGR2GRAY)
-cv.imshow('Gray Doc', gray)
+    dst = np.array([
+        [0,0],
+        [maxWidth - 1, 0],
+        [maxWidth - 1, maxHeight - 1],
+        [0, maxHeight - 1]], dtype="float32"
+    )
 
-blur = cv.GaussianBlur(gray, (3,3), cv.BORDER_DEFAULT)
-cv.imshow('Blurred Doc', blur)
+    M = cv.getPerspectiveTransform(rect, dst)
+    warped = cv.warpPerspective(image, M, (maxWidth, maxHeight))
 
-canny = cv.Canny(blur, 50,150)  # Generally used for documnet scanning
-cv.imshow('Canny Doc', canny)
+    return warped
 
-# canny = cv.Canny(blur, 175, 200)
-# canny = cv.dilate(canny, np.ones((5,5), np.uint8), iterations=1)
-# cv.imshow('Canny Doc', canny)
+def ocr(img):
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    ret, thresh = cv.threshold(gray, 128,255, cv.THRESH_BINARY)
+    return thresh
 
-contours, hierarchies = cv.findContours(canny, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE) 
-# cv.RETR_EXTERNAL - generally used for 1. Document boundary detection  2. Biggest Object Detection   3. Object Detection 4. Shape Detection
-# cv.RETR_LIST - generally used for all contours detection (here detects evrything like text , shades, document boundary, shadows, folds, etc)
 
+def resize_image(frame, scale=0.5):
+    w = frame.shape[1]
+    h = frame.shape[0]
+    d = (int(w * scale),int(h * scale))
+    if scale > 1:
+        scale_mode = cv.INTER_CUBIC
+    elif scale < 1:
+        scale_mode = cv.INTER_AREA  
+    return cv.resize(frame, d, interpolation=scale_mode)
+
+
+img = cv.imread('../Images/photo_6194762285033655125_y.jpg')
+cv.imshow('Original Image', img)
+
+resized_img = resize_image(img, 0.5)
+cv.imshow('Resized Image', resized_img)
+
+frame_copy = resized_img.copy()
+
+gray = cv.cvtColor(resized_img, cv.COLOR_BGR2GRAY)
+cv.imshow('Gray Image', gray)
+
+blur = cv.GaussianBlur(gray, (5,5), cv.BORDER_DEFAULT)
+cv.imshow('Blurred Image', blur)
+
+# edges = cv.Canny(resized_img, 100, 200)
+# cv.imshow('Canny Edges', edges)
+
+ret, thresh = cv.threshold(blur, 0,255,cv.THRESH_BINARY + cv.THRESH_OTSU)
+cv.imshow('Thresholded Image', thresh)
+
+contours, hierarchies = cv.findContours(thresh, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+contours = sorted(contours, key=cv.contourArea, reverse=True)
 print(f'{len(contours)} contour(s) found')
 
-contours = sorted(contours, key=cv.contourArea, reverse=True)
+max_area = 0;
+for contour in contours:
+    area = cv.contourArea(contour)
+    if area > 1000:
+        peri = cv.arcLength(contour, True)
+        approx = cv.approxPolyDP(contour, 0.015 * peri, True)
+        if area > max_area and len(approx) == 4:
+            document_contour  = approx
+            max_area = area
 
-for cnt in contours:
-    peri = cv.arcLength(cnt,True)
-    approx = cv.approxPolyDP(cnt, 0.02*peri, True)
+cv.drawContours(resized_img, [document_contour], -1, (0,255,0), 3)
+cv.imshow('Biggest Contour', resized_img)
 
-    if(len(approx) == 4):
-        doc_contours = approx
-        break
+warped = four_point_transform(frame_copy, document_contour.reshape(4,2))
+cv.imshow('Warped', warped)
 
-    if len(approx) != 4:
-        rect = cv.minAreaRect(cnt)
-        doc_contours = np.int32(cv.boxPoints(rect))
+scanned_image = ocr(warped)
+cv.imshow('OCR', scanned_image)
 
-print(doc_contours)
-debug = doc.copy()
-# draw contour
-cv.drawContours(debug, [doc_contours], -1, (0, 255, 0), 2)
+pressed_key = cv.waitKey(0) & 0xff
+count = 0
 
-# draw red points on each corner
-for p in doc_contours:
-    x, y = p[0]
-    cv.circle(debug, (x, y), 6, (0, 0, 255), -1)
-
-cv.imshow("Document Contour with Points", debug)
-
-
-ordered = order_points(doc_contours)
-
-for (x, y) in ordered:
-    print(x, y)
-    cv.circle(debug, (int(x), int(y)), 3, (255,0,0), -1)
-
-cv.imshow("Detected Document Contour", debug)
+if pressed_key == ord('s'):
+    os.makedirs("Scans", exist_ok=True)
+    name = input("Enter the name of file : ")
+    cv.imwrite(f'Scans/Scanned_Image_({name}).jpg', scanned_image)
 
 
-
-
-
-src_pts = order_points(doc_contours)
-
-tl, tr, br ,bl = src_pts
-widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-maxWidth = max(int(widthA), int(widthB))
-
-heightA = np.sqrt(((tr[0] - br[0])**2 + (tr[1] - br[1])**2))
-heightB = np.linalg.norm(tl-bl)
-maxHeight = max(int(heightA), int(heightB))
-
-dst_pts = np.array([
-    [0,0],
-    [maxWidth - 1, 0],
-    [maxWidth - 1, maxHeight - 1],
-    [0, maxHeight - 1]], dtype='float32'
-)
-print(src_pts)
-print(dst_pts)
-M = cv.getPerspectiveTransform(src_pts, dst_pts)
-warped = cv.warpPerspective(gray, M, (maxWidth, maxHeight));
-warped = cv.normalize(warped, None, 0, 255, cv.NORM_MINMAX)
-
-cv.imshow('Warped Document', warped)
-
-scanned = cv.adaptiveThreshold(
-    warped,
-    255,
-    cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-    cv.THRESH_BINARY,
-    25,
-    15
-)
-
-cv.imshow('Scanned Document', scanned)
-
-cv.waitKey(0)
 cv.destroyAllWindows()
+
+
