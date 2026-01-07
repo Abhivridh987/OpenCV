@@ -54,7 +54,7 @@ import numpy as np
 #     return (center, rad)
 
 # ---------- Utility ----------
-def resize_image(frame, scale=0.5):
+def resize_image(frame, scale=1):
     h, w = frame.shape[:2]
     return cv.resize(frame, (int(w * scale), int(h * scale)),
                      interpolation=cv.INTER_AREA)
@@ -71,16 +71,16 @@ def get_center_and_radius(cnt):
     (_, _), radius = cv.minEnclosingCircle(cnt)
     return (cx, cy), int(radius)
 
-img = resize_image(cv.imread('../Images/download.jfif'), scale=2)
+img = resize_image(cv.imread('../Images/big_ball.jpg') ,scale=0.5)
 
 
 
 cv.imshow('Image', img)
 
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-blur = cv.GaussianBlur(gray, (5,5), 0)
-a = 38
-b=277
+blur = cv.GaussianBlur(gray, (7,7), 0)
+a = 50
+b=300
 canva = img.copy()
 canny = cv.Canny(blur, a,b)
 cv.imshow('Canny ', canny)
@@ -119,7 +119,7 @@ rad = int(rad)
 cv.circle(canva, center, rad, (0,255,0), thickness=2)
 cv.circle(canva, center, 1, (0,255,0) ,thickness=5)
 
-cv.imshow('Biggest Object', canva)
+cv.imshow('Biggest Object', resize_image(canva, 2))
 
 
 

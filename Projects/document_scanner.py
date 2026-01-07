@@ -61,7 +61,7 @@ def resize_image(frame, scale=0.5):
 img = cv.imread('../Images/photo_6194762285033655125_y.jpg')
 cv.imshow('Original Image', img)
 
-resized_img = resize_image(img, 0.5)
+resized_img = resize_image(img)
 cv.imshow('Resized Image', resized_img)
 
 frame_copy = resized_img.copy()
