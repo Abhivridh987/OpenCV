@@ -2,10 +2,11 @@ import cv2 as cv
 import numpy as np
 
 
-def resize_image(frame, scale=0.5):
+def resize_image(frame, scale=0.9):
     w = frame.shape[1]
     h = frame.shape[0]
     d = (int(w * scale),int(h * scale))
+
     if scale > 1:
         scale_mode = cv.INTER_CUBIC
     elif scale < 1:
@@ -13,16 +14,16 @@ def resize_image(frame, scale=0.5):
     return cv.resize(frame, d, interpolation=scale_mode)
 
 
-img = cv.imread('../Images/octagon.png')
+img = resize_image(cv.imread('../Images/octagon.png'))
 
 frame_copy = img.copy()
 
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-blur = cv.GaussianBlur(gray, (5,5), cv.BORDER_DEFAULT)
+cv.imshow('Gray', gray)
+blur = cv.GaussianBlur(gray, (3,3), cv.BORDER_DEFAULT)
 
 canny = cv.Canny(blur, 100, 200)
-# cv.imshow('Canny Edges', edges)
+cv.imshow('Canny Edges', canny)
 
 # ret, thresh = cv.threshold(blur, 0,255,cv.THRESH_BINARY + cv.THRESH_OTSU)
 contours, hierarchies = cv.findContours(canny , cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
