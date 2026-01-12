@@ -56,9 +56,9 @@ result = cv.bitwise_and(img, img,  mask=mask_clean)
 
 result_gray = cv.cvtColor(result, cv.COLOR_BGR2GRAY)
 
-result_blur = cv.GaussianBlur(result_gray, (7,7), 0)
+result_blur = cv.GaussianBlur(result_gray, (7,11), 0)
 
-edges = cv.Canny(result_blur, 120,220)
+edges = cv.Canny(result_blur, 150,220)
 
 
 edge_kernel = np.ones((5,5), dtype='uint8')
