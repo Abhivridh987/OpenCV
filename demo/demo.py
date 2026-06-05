@@ -60,7 +60,7 @@ while True:
     cv2.imshow("Mask", mask)
     cv2.imshow("Frame", frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('hmvnq'):
         break
 
 cap.release()
