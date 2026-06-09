@@ -18,9 +18,9 @@ blue = (255,0,0)
 green = (0,255,0)
 red = (0,0,255)
 
-for i in range(1,8,1):
-    blank[width_bar*i, :] = 255,255,255
-    blank[:, height_bar*i] = 255,255,255
+for i in range(1,8,2):
+    blank[width_bar*i : width_bar*(i+1), :] = 255,255,255
+    blank[:, height_bar*i : height_bar*(i+1)] = 255,255,255
 
 
 cv.imshow('CrossLines', blank);
