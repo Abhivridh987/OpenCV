@@ -62,8 +62,7 @@ for image_path in images:
     ret, corners = cv.findChessboardCorners(
         gray, 
         CHECKERBOARD,
-        cv.CALIB_CB_ADAPTIVE_THRESH +
-        cv.CALIB_CB_NORMALIZE_IMAGE
+        None
     )
 
     if ret:
@@ -88,7 +87,7 @@ for image_path in images:
         cv.imshow("Detected Corners", img)
 
         cv.waitKey(200)
-        print(f'SUCCESS : {image_path}')
+        print(f'SUCCESS : {image_path}', img.shape)
     else:
         failed_images+=1
         print(f'FAILED : {image_path}')

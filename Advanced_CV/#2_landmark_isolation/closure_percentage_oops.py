@@ -9,7 +9,7 @@ from HandDetection import HandDetection
 
 def main():
 
-    cap = cv.VideoCapture(0)
+    cap = cv.VideoCapture(1)
     true, frame = cap.read()
     inference_screen = np.zeros(frame.shape[:-1], dtype='uint8')
 
